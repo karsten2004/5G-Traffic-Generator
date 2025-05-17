@@ -17,7 +17,7 @@ def train(cfg):
     )
 
     # Set Train options
-    trainer = Trainer(gpus=[0], log_every_n_steps=1,
+    trainer = Trainer(accelerator='auto', devices='auto', log_every_n_steps=1,
                       num_sanity_val_steps=0, max_epochs=-1, callbacks=[ckpt_callback])
 
     # Load datamodule

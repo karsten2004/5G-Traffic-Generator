@@ -18,17 +18,24 @@ def inference(cfg):
     dm.setup(stage='inference')
     print('Load from ckpt')
     model = GAN.load_from_checkpoint(cfg.checkpoint.path)
+    # Use the best available device
     if torch.cuda.is_available():
-        model = model.cuda()
-    print('Model loaded')
+        device = torch.device("cuda")
+    elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
+    model = model.to(device)
+    print(f'Model loaded on {device}')
     model.eval()
 
     print('inference start')
     df = pd.DataFrame()
     # Generate data for each conditions
     for i, condition in enumerate(dm.conditions):
-        z = model.sample_Z(cfg.checkpoint.batch_size, 300, 100)
-        gen = model(z.cuda(), model.create_condition(condition, len(z)).cuda())
+        z = model.sample_Z(cfg.checkpoint.batch_size, 300, 100).to(device)
+        condition_tensor = model.create_condition(condition, len(z)).to(device)
+        gen = model(z, condition_tensor)
         gen = gen.cpu().detach().numpy().squeeze()
         gen = dm.scalers[dm.cols[i]].inverse_transform(gen.reshape(-1, 1))
         gen = gen.reshape(-1)
